@@ -1,0 +1,17 @@
+# Van der Pol / Strange Attractors Visualization
+# Python 3.10+ recommended
+
+# Core scientific stack
+numpy>=1.24
+scipy>=1.11
+matplotlib>=3.7
+
+# Jupyter
+jupyterlab>=4.0
+ipywidgets>=8.0
+
+# Manim Community Edition (3D animations)
+manim>=0.18
+
+# Optional: better notebook experience
+tqdm
