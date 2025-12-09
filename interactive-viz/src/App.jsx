@@ -3,16 +3,20 @@ import VanDerPolEnergy from './components/VanDerPolEnergy';
 import LorenzDetailed from './components/LorenzDetailed';
 import DuffingEvolution from './components/DuffingEvolution';
 import CERNChaosControl from './components/CERNChaosControl';
-import { Waves, Orbit, TrendingUp, Zap } from 'lucide-react';
+import AcademicExplorer from './components/AcademicExplorer';
+import Contact from './components/Contact';
+import { Waves, Orbit, TrendingUp, Zap, BookOpen, User } from 'lucide-react';
 
 function App() {
-  const [activeViz, setActiveViz] = useState('vanderpol');
+  const [activeViz, setActiveViz] = useState('academic');
 
   const navItems = [
+    { id: 'academic', label: 'Academic', icon: BookOpen, bg: '#be185d' },
     { id: 'vanderpol', label: 'Van der Pol', icon: Waves, bg: '#2563eb' },
     { id: 'lorenz', label: 'Lorenz', icon: Orbit, bg: '#7c3aed' },
     { id: 'duffing', label: 'Duffing', icon: TrendingUp, bg: '#16a34a' },
-    { id: 'cern', label: 'CERN Control', icon: Zap, bg: '#ca8a04' }
+    { id: 'cern', label: 'CERN Control', icon: Zap, bg: '#ca8a04' },
+    { id: 'contact', label: 'Contact', icon: User, bg: '#0891b2' }
   ];
 
   return (
@@ -51,10 +55,12 @@ function App() {
 
       {/* Main Content */}
       <main className="pt-14">
+        {activeViz === 'academic' && <AcademicExplorer />}
         {activeViz === 'vanderpol' && <VanDerPolEnergy />}
         {activeViz === 'lorenz' && <LorenzDetailed />}
         {activeViz === 'duffing' && <DuffingEvolution />}
         {activeViz === 'cern' && <CERNChaosControl />}
+        {activeViz === 'contact' && <Contact />}
       </main>
     </div>
   );

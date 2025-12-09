@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Settings, Eye, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, Settings, Eye, Sparkles, Plus, Trash2 } from 'lucide-react';
 
 const LorenzDetailed = () => {
   const canvasRef = useRef(null);
@@ -10,13 +10,16 @@ const LorenzDetailed = () => {
   const [beta, setBeta] = useState(8/3);
   const [showSettings, setShowSettings] = useState(false);
   const [viewMode, setViewMode] = useState('xz'); // 'xz', 'xy', 'yz', '3d'
-  const [trailLength, setTrailLength] = useState(1000);
-  const [showSecondTrajectory, setShowSecondTrajectory] = useState(true);
+  const [trailLength, setTrailLength] = useState(2000); // Longer trail for bigger time window
+  const [showSecondTrajectory, setShowSecondTrajectory] = useState(false);
+  const [perturbation, setPerturbation] = useState(1e-4); // Larger default perturbation for visible divergence
+  const [simSpeed, setSimSpeed] = useState(3); // Simulation speed multiplier
   
   const trajectoriesRef = useRef([
-    { x: 0.0, y: 1.0, z: 1.05, points: [], color: 'rgb(255, 100, 100)' },
-    { x: 0.0, y: 1.0, z: 1.0500001, points: [], color: 'rgb(100, 200, 255)' }
+    { x: 0.0, y: 1.0, z: 1.05, points: [], color: 'rgb(255, 80, 80)', label: 'Trajectory 1' }
   ]);
+  
+  const diffTrailRef = useRef([]); // Trail for the difference vector particle
   
   const timeRef = useRef(0);
   const rotationRef = useRef(0);
@@ -44,10 +47,39 @@ const LorenzDetailed = () => {
   
   const reset = () => {
     timeRef.current = 0;
+    diffTrailRef.current = []; // Clear difference trail
+    if (showSecondTrajectory) {
+      trajectoriesRef.current = [
+        { x: 0.0, y: 1.0, z: 1.05, points: [], color: 'rgb(255, 80, 80)', label: 'Trajectory 1' },
+        { x: 0.0, y: 1.0, z: 1.05 + perturbation, points: [], color: 'rgb(80, 150, 255)', label: 'Trajectory 2' }
+      ];
+    } else {
+      trajectoriesRef.current = [
+        { x: 0.0, y: 1.0, z: 1.05, points: [], color: 'rgb(255, 80, 80)', label: 'Trajectory 1' }
+      ];
+    }
+  };
+  
+  // Add or remove second trajectory
+  const addSecondTrajectory = () => {
+    const traj1 = trajectoriesRef.current[0];
     trajectoriesRef.current = [
-      { x: 0.0, y: 1.0, z: 1.05, points: [], color: 'rgb(255, 100, 100)' },
-      { x: 0.0, y: 1.0, z: 1.0500001, points: [], color: 'rgb(100, 200, 255)' }
+      traj1,
+      { 
+        x: traj1.x, 
+        y: traj1.y, 
+        z: traj1.z + perturbation, 
+        points: [{ x: traj1.x, y: traj1.y, z: traj1.z + perturbation }], 
+        color: 'rgb(80, 150, 255)', 
+        label: 'Trajectory 2 (perturbed)' 
+      }
     ];
+    setShowSecondTrajectory(true);
+  };
+  
+  const removeSecondTrajectory = () => {
+    trajectoriesRef.current = [trajectoriesRef.current[0]];
+    setShowSecondTrajectory(false);
   };
   
   // 3D projection helper
@@ -90,26 +122,29 @@ const LorenzDetailed = () => {
       const height = canvas.height;
       
       if (isPlaying) {
-        timeRef.current += 0.005;
-        rotationRef.current += 0.002;
-        
-        trajectoriesRef.current = trajectoriesRef.current.map(traj => {
-          const dt = 0.005;
-          const newState = rk4Step(traj.x, traj.y, traj.z, dt, sigma, rho, beta);
+        // Run multiple integration steps per frame for faster simulation
+        for (let step = 0; step < simSpeed; step++) {
+          timeRef.current += 0.01;
+          rotationRef.current += 0.003;
           
-          const newPoints = [...traj.points, { x: newState.x, y: newState.y, z: newState.z }];
-          if (newPoints.length > trailLength) {
-            newPoints.shift();
-          }
-          
-          return {
-            ...traj,
-            x: newState.x,
-            y: newState.y,
-            z: newState.z,
-            points: newPoints
-          };
-        });
+          trajectoriesRef.current = trajectoriesRef.current.map(traj => {
+            const dt = 0.01; // Larger time step
+            const newState = rk4Step(traj.x, traj.y, traj.z, dt, sigma, rho, beta);
+            
+            const newPoints = [...traj.points, { x: newState.x, y: newState.y, z: newState.z }];
+            if (newPoints.length > trailLength) {
+              newPoints.shift();
+            }
+            
+            return {
+              ...traj,
+              x: newState.x,
+              y: newState.y,
+              z: newState.z,
+              points: newPoints
+            };
+          });
+        }
       }
       
       // Background with gradient
@@ -192,7 +227,9 @@ const LorenzDetailed = () => {
         
         // Draw with depth-based coloring for 3D
         for (let i = 1; i < traj.points.length; i++) {
-          const alpha = 0.2 + 0.8 * (i / traj.points.length);
+          // Lower opacity for both trajectories so they're both visible when overlapping
+          const baseAlpha = trajIdx === 0 ? 0.5 : 0.6; // Slightly different for visual distinction
+          const alpha = 0.15 + baseAlpha * (i / traj.points.length);
           
           let p1, p2;
           if (viewMode === '3d') {
@@ -217,7 +254,7 @@ const LorenzDetailed = () => {
           }
           
           ctx.strokeStyle = traj.color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
-          ctx.lineWidth = 1.5;
+          ctx.lineWidth = trajIdx === 0 ? 2 : 2.5; // Second trajectory slightly thicker
           ctx.beginPath();
           ctx.moveTo(p1.x, p1.y);
           ctx.lineTo(p2.x, p2.y);
@@ -237,19 +274,24 @@ const LorenzDetailed = () => {
           currentPos = { x: centerX + traj.y * scale, y: centerY - traj.z * scale * 0.7 };
         }
         
-        // Glowing particle
+        // Glowing particle - larger for second trajectory
+        const particleSize = trajIdx === 0 ? 8 : 10;
+        const glowSize = trajIdx === 0 ? 14 : 18;
+        const coreSize = trajIdx === 0 ? 4 : 6;
+        const glowAlpha = trajIdx === 0 ? 0.4 : 0.5; // Lower opacity for visibility
+        
         ctx.beginPath();
-        ctx.arc(currentPos.x, currentPos.y, 8, 0, 2 * Math.PI);
-        const glow = ctx.createRadialGradient(currentPos.x, currentPos.y, 0, currentPos.x, currentPos.y, 12);
-        glow.addColorStop(0, traj.color);
-        glow.addColorStop(0.5, traj.color.replace('rgb', 'rgba').replace(')', ', 0.5)'));
+        ctx.arc(currentPos.x, currentPos.y, particleSize, 0, 2 * Math.PI);
+        const glow = ctx.createRadialGradient(currentPos.x, currentPos.y, 0, currentPos.x, currentPos.y, glowSize);
+        glow.addColorStop(0, traj.color.replace('rgb', 'rgba').replace(')', `, ${glowAlpha + 0.3})`));
+        glow.addColorStop(0.5, traj.color.replace('rgb', 'rgba').replace(')', `, ${glowAlpha})`));
         glow.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = glow;
         ctx.fill();
         
-        ctx.fillStyle = traj.color;
+        ctx.fillStyle = traj.color.replace('rgb', 'rgba').replace(')', ', 0.8)');
         ctx.beginPath();
-        ctx.arc(currentPos.x, currentPos.y, 4, 0, 2 * Math.PI);
+        ctx.arc(currentPos.x, currentPos.y, coreSize, 0, 2 * Math.PI);
         ctx.fill();
       });
       
@@ -274,7 +316,12 @@ const LorenzDetailed = () => {
       const graphW = panelWidth - 4 * padding;
       const graphH = panelHeight - 2 * padding - 80;
       
-      if (trajectoriesRef.current[0].points.length > 1 && trajectoriesRef.current[1].points.length > 1) {
+      // Check if we have two trajectories to compare
+      const hasTwoTrajectories = trajectoriesRef.current.length > 1 && 
+                                  trajectoriesRef.current[1] && 
+                                  trajectoriesRef.current[1].points;
+      
+      if (hasTwoTrajectories && trajectoriesRef.current[0].points.length > 1 && trajectoriesRef.current[1].points.length > 1) {
         const distances = [];
         const minLen = Math.min(trajectoriesRef.current[0].points.length, trajectoriesRef.current[1].points.length);
         
@@ -338,13 +385,24 @@ const LorenzDetailed = () => {
         ctx.fillText(`Δ = ${currentDist.toExponential(2)}`, graphX, padding + 45);
         ctx.fillStyle = 'rgba(200, 200, 200, 0.7)';
         ctx.font = '11px monospace';
-        ctx.fillText(`Initial Δz₀ = 10⁻⁷`, graphX + 150, padding + 45);
+        ctx.fillText(`Initial Δz₀ = ${perturbation.toExponential(0)}`, graphX + 150, padding + 45);
+      } else {
+        // No second trajectory - show instruction
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Add a perturbed trajectory to see', panelWidth / 2, graphY + graphH / 2 - 20);
+        ctx.fillText('the Butterfly Effect in action!', panelWidth / 2, graphY + graphH / 2 + 5);
+        ctx.font = '12px monospace';
+        ctx.fillStyle = 'rgba(100, 200, 100, 0.7)';
+        ctx.fillText('Click "Show Parameters" → "Add Perturbed Trajectory"', panelWidth / 2, graphY + graphH / 2 + 40);
+        ctx.textAlign = 'left';
       }
       
       ctx.restore();
       
       // ═══════════════════════════════════════════════════════════════════
-      // PANEL 3: State Variables (Bottom Left)
+      // PANEL 3: Coordinate Timeline x(t), y(t), z(t) (Bottom Left)
       // ═══════════════════════════════════════════════════════════════════
       ctx.save();
       ctx.translate(0, panelHeight);
@@ -355,56 +413,118 @@ const LorenzDetailed = () => {
       
       ctx.fillStyle = 'white';
       ctx.font = 'bold 15px monospace';
-      ctx.fillText('State Variables: x(t), y(t), z(t)', padding + 10, padding + 22);
+      ctx.fillText('Coordinate Timeline x(t), y(t), z(t)', padding + 10, padding + 22);
       
-      const stateGraphX = padding * 2;
-      const stateGraphY = padding + 45;
-      const stateGraphW = panelWidth - 4 * padding;
-      const stateGraphH = (panelHeight - 3 * padding - 60) / 3;
+      const traj1 = trajectoriesRef.current[0];
+      const traj2 = showSecondTrajectory && trajectoriesRef.current.length > 1 ? trajectoriesRef.current[1] : null;
       
-      const colors = ['rgba(255, 100, 100, 0.9)', 'rgba(100, 255, 100, 0.9)', 'rgba(100, 200, 255, 0.9)'];
+      const timelineX = padding * 2;
+      const timelineY = padding + 45;
+      const timelineW = panelWidth - 4 * padding;
+      const timelineH = (panelHeight - 3 * padding - 70) / 3;
+      
+      // Colors for each coordinate
+      const coordColors = {
+        x: { traj1: 'rgba(255, 80, 80, 1)', traj2: 'rgba(255, 180, 180, 0.9)' },
+        y: { traj1: 'rgba(80, 255, 80, 1)', traj2: 'rgba(180, 255, 180, 0.9)' },
+        z: { traj1: 'rgba(80, 180, 255, 1)', traj2: 'rgba(180, 220, 255, 0.9)' }
+      };
       const labels = ['x(t)', 'y(t)', 'z(t)'];
-      const maxVals = [30, 30, 55];
+      const maxVals = [25, 30, 50]; // Approximate max values for each coordinate
       
-      const traj = trajectoriesRef.current[0];
-      
-      if (traj.points.length > 1) {
+      if (traj1.points.length > 1) {
         ['x', 'y', 'z'].forEach((coord, idx) => {
-          const graphTop = stateGraphY + idx * (stateGraphH + 10);
-          const graphCenterY = graphTop + stateGraphH / 2;
+          const graphTop = timelineY + idx * (timelineH + 8);
+          const graphCenterY = graphTop + timelineH / 2;
+          
+          // Background for this subplot
+          ctx.fillStyle = 'rgba(30, 30, 40, 0.5)';
+          ctx.fillRect(timelineX, graphTop, timelineW, timelineH);
           
           // Zero line
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
           ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
           ctx.beginPath();
-          ctx.moveTo(stateGraphX, graphCenterY);
-          ctx.lineTo(stateGraphX + stateGraphW, graphCenterY);
+          ctx.moveTo(timelineX, graphCenterY);
+          ctx.lineTo(timelineX + timelineW, graphCenterY);
           ctx.stroke();
+          ctx.setLineDash([]);
           
-          // Variable curve
-          ctx.strokeStyle = colors[idx];
-          ctx.lineWidth = 1.5;
+          // Trajectory 1 (solid, thick)
+          ctx.strokeStyle = coordColors[coord].traj1;
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          for (let i = 0; i < traj.points.length; i++) {
-            const px = stateGraphX + (i / trailLength) * stateGraphW;
-            const val = traj.points[i][coord];
-            const py = graphCenterY - (val / maxVals[idx]) * (stateGraphH / 2);
+          for (let i = 0; i < traj1.points.length; i++) {
+            const px = timelineX + (i / trailLength) * timelineW;
+            const val = traj1.points[i][coord];
+            const py = graphCenterY - (val / maxVals[idx]) * (timelineH / 2) * 0.85;
             if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
           }
           ctx.stroke();
           
-          // Label
-          ctx.fillStyle = colors[idx];
-          ctx.font = '12px monospace';
-          ctx.fillText(`${labels[idx]} = ${traj[coord].toFixed(2)}`, stateGraphX, graphTop - 5);
+          // Trajectory 2 (if enabled) - different style
+          if (traj2 && traj2.points.length > 1) {
+            ctx.strokeStyle = coordColors[coord].traj2;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            for (let i = 0; i < traj2.points.length; i++) {
+              const px = timelineX + (i / trailLength) * timelineW;
+              const val = traj2.points[i][coord];
+              const py = graphCenterY - (val / maxVals[idx]) * (timelineH / 2) * 0.85;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+          }
+          
+          // Label with current values
+          ctx.font = '11px monospace';
+          ctx.fillStyle = coordColors[coord].traj1;
+          const val1 = traj1[coord].toFixed(1);
+          if (traj2) {
+            const val2 = traj2[coord].toFixed(1);
+            const diff = Math.abs(traj1[coord] - traj2[coord]);
+            ctx.fillText(`${labels[idx]}: ${val1}`, timelineX, graphTop - 3);
+            ctx.fillStyle = coordColors[coord].traj2;
+            ctx.fillText(`| ${val2}`, timelineX + 70, graphTop - 3);
+            // Show difference with color intensity based on magnitude
+            const diffColor = diff > 10 ? 'rgba(255, 100, 100, 1)' : diff > 1 ? 'rgba(255, 200, 100, 1)' : 'rgba(100, 255, 100, 0.8)';
+            ctx.fillStyle = diffColor;
+            ctx.fillText(`Δ=${diff.toFixed(1)}`, timelineX + 130, graphTop - 3);
+          } else {
+            ctx.fillText(`${labels[idx]} = ${val1}`, timelineX, graphTop - 3);
+          }
+          
+          // Y-axis scale markers
+          ctx.fillStyle = 'rgba(150, 150, 150, 0.4)';
+          ctx.font = '8px monospace';
+          ctx.fillText(`+${maxVals[idx]}`, timelineX - 22, graphTop + 8);
+          ctx.fillText(`-${maxVals[idx]}`, timelineX - 22, graphTop + timelineH - 2);
         });
+        
+        // Legend
+        if (traj2) {
+          ctx.font = '10px monospace';
+          ctx.fillStyle = 'rgba(255, 80, 80, 1)';
+          ctx.fillText('━ Traj 1', timelineX + timelineW - 100, timelineY - 12);
+          ctx.fillStyle = 'rgba(255, 180, 180, 0.9)';
+          ctx.fillText('━ Traj 2', timelineX + timelineW - 45, timelineY - 12);
+        }
+        
+        // Time axis label
+        ctx.fillStyle = 'rgba(200, 200, 200, 0.6)';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Time window: ${(trailLength * 0.01).toFixed(0)}s`, panelWidth / 2, panelHeight - padding - 5);
+        ctx.textAlign = 'left';
       }
       
       ctx.restore();
       
       // ═══════════════════════════════════════════════════════════════════
-      // PANEL 4: Energy / Nonlinear Terms (Bottom Right)
+      // PANEL 4: 3D Difference Vector Visualization (Bottom Right)
       // ═══════════════════════════════════════════════════════════════════
       ctx.save();
       ctx.translate(panelWidth, panelHeight);
@@ -415,66 +535,142 @@ const LorenzDetailed = () => {
       
       ctx.fillStyle = 'white';
       ctx.font = 'bold 15px monospace';
-      ctx.fillText('Energy & Wing Switching', padding + 10, padding + 22);
+      ctx.fillText('Difference Vector Δ(x,y,z)', padding + 10, padding + 22);
       
-      const energyGraphX = padding * 2;
-      const energyGraphY = padding + 50;
-      const energyGraphW = panelWidth - 4 * padding;
-      const energyGraphH = panelHeight - 3 * padding - 80;
+      const vecCenterX = panelWidth / 2;
+      const vecCenterY = panelHeight / 2 + 20;
+      const vecScale = Math.min(panelWidth, panelHeight) / 5;
       
-      if (traj.points.length > 1) {
-        // Energy: E = x² + y² + (z - σ - ρ)²
-        const energies = traj.points.map(p => 
-          p.x*p.x + p.y*p.y + p.z*p.z
-        );
-        const maxE = Math.max(...energies, 1);
+      if (traj2 && traj1.points.length > 0 && traj2.points.length > 0) {
+        const dx = traj1.x - traj2.x;
+        const dy = traj1.y - traj2.y;
+        const dz = traj1.z - traj2.z;
+        const magnitude = Math.sqrt(dx*dx + dy*dy + dz*dz);
         
-        // Wing indicator (sign of x)
-        const wingIndicator = traj.points.map(p => p.x > 0 ? 1 : -1);
+        // Normalize and scale for display (log scale for visibility)
+        const logMag = Math.log10(magnitude + 1e-10);
+        const displayScale = Math.max(0.1, Math.min(1, (logMag + 8) / 10)); // -8 to +2 -> 0.1 to 1
         
-        // Draw wing switching as background
-        let lastSign = wingIndicator[0];
-        let startIdx = 0;
-        for (let i = 1; i <= wingIndicator.length; i++) {
-          if (i === wingIndicator.length || wingIndicator[i] !== lastSign) {
-            const startPx = energyGraphX + (startIdx / trailLength) * energyGraphW;
-            const endPx = energyGraphX + (i / trailLength) * energyGraphW;
+        // Draw coordinate axes
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+        ctx.lineWidth = 1;
+        // X axis
+        ctx.beginPath();
+        ctx.moveTo(vecCenterX - vecScale, vecCenterY);
+        ctx.lineTo(vecCenterX + vecScale, vecCenterY);
+        ctx.stroke();
+        // Y axis (vertical in 2D projection)
+        ctx.beginPath();
+        ctx.moveTo(vecCenterX, vecCenterY - vecScale);
+        ctx.lineTo(vecCenterX, vecCenterY + vecScale);
+        ctx.stroke();
+        // Z axis (diagonal)
+        ctx.beginPath();
+        ctx.moveTo(vecCenterX - vecScale * 0.5, vecCenterY + vecScale * 0.5);
+        ctx.lineTo(vecCenterX + vecScale * 0.5, vecCenterY - vecScale * 0.5);
+        ctx.stroke();
+        
+        // Axis labels
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.6)';
+        ctx.font = '10px monospace';
+        ctx.fillText('Δx', vecCenterX + vecScale + 5, vecCenterY + 4);
+        ctx.fillText('Δy', vecCenterX + 5, vecCenterY - vecScale - 5);
+        ctx.fillText('Δz', vecCenterX + vecScale * 0.5 + 5, vecCenterY - vecScale * 0.5 - 5);
+        
+        // Color based on magnitude (green -> yellow -> red)
+        const hue = Math.max(0, 120 - (logMag + 6) * 20); // 120=green, 0=red
+        const vecColor = `hsl(${hue}, 100%, 60%)`;
+        
+        // Project difference to 2D screen coords
+        const projScale = vecScale * 1.2;
+        const projX = dx + dz * 0.4;
+        const projY = -dy - dz * 0.4;
+        
+        // Normalize for display (use log scaling for large values)
+        const maxCoord = Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz), 0.01);
+        const normScale = maxCoord > 10 ? 10 / maxCoord : 1;
+        const screenX = vecCenterX + projX * normScale * projScale / 10;
+        const screenY = vecCenterY + projY * normScale * projScale / 10;
+        
+        // Add point to difference trail
+        diffTrailRef.current.push({ x: screenX, y: screenY, mag: magnitude });
+        const maxTrailLen = 500;
+        if (diffTrailRef.current.length > maxTrailLen) {
+          diffTrailRef.current = diffTrailRef.current.slice(-maxTrailLen);
+        }
+        
+        // Draw trail with fading
+        if (diffTrailRef.current.length > 1) {
+          for (let i = 1; i < diffTrailRef.current.length; i++) {
+            const alpha = i / diffTrailRef.current.length;
+            const pt = diffTrailRef.current[i];
+            const prevPt = diffTrailRef.current[i - 1];
             
-            ctx.fillStyle = lastSign > 0 ? 'rgba(255, 100, 100, 0.1)' : 'rgba(100, 200, 255, 0.1)';
-            ctx.fillRect(startPx, energyGraphY, endPx - startPx, energyGraphH);
+            // Color gradient based on magnitude at each point
+            const ptLogMag = Math.log10(pt.mag + 1e-10);
+            const ptHue = Math.max(0, 120 - (ptLogMag + 6) * 20);
             
-            if (i < wingIndicator.length) {
-              lastSign = wingIndicator[i];
-              startIdx = i;
-            }
+            ctx.beginPath();
+            ctx.strokeStyle = `hsla(${ptHue}, 100%, 60%, ${alpha * 0.8})`;
+            ctx.lineWidth = 1 + alpha * 2;
+            ctx.moveTo(prevPt.x, prevPt.y);
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
           }
         }
         
-        // Energy curve
-        ctx.strokeStyle = 'rgba(255, 200, 100, 0.9)';
-        ctx.lineWidth = 2;
+        // Draw origin marker
         ctx.beginPath();
-        for (let i = 0; i < energies.length; i++) {
-          const px = energyGraphX + (i / trailLength) * energyGraphW;
-          const py = energyGraphY + energyGraphH - (energies[i] / maxE) * energyGraphH;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.stroke();
+        ctx.arc(vecCenterX, vecCenterY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+        ctx.fill();
         
-        // Labels
-        ctx.fillStyle = 'rgba(255, 200, 100, 0.9)';
-        ctx.font = '12px monospace';
-        ctx.fillText(`E = ${energies[energies.length - 1].toFixed(1)}`, energyGraphX, padding + 45);
+        // Draw current particle with glow
+        ctx.shadowColor = vecColor;
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 8, 0, Math.PI * 2);
+        ctx.fillStyle = vecColor;
+        ctx.fill();
+        ctx.shadowBlur = 0;
         
-        ctx.fillStyle = 'rgba(255, 100, 100, 0.7)';
+        // Inner bright core
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        
+        // Component values
+        ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
         ctx.font = '11px monospace';
-        ctx.fillText('Right wing (x > 0)', energyGraphX + energyGraphW - 130, energyGraphY - 5);
-        ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
-        ctx.fillText('Left wing (x < 0)', energyGraphX, energyGraphY - 5);
+        ctx.fillText(`Δx = ${dx.toFixed(2)}`, padding + 15, panelHeight - padding - 45);
+        ctx.fillStyle = 'rgba(100, 255, 100, 0.9)';
+        ctx.fillText(`Δy = ${dy.toFixed(2)}`, padding + 15, panelHeight - padding - 30);
+        ctx.fillStyle = 'rgba(100, 200, 255, 0.9)';
+        ctx.fillText(`Δz = ${dz.toFixed(2)}`, padding + 15, panelHeight - padding - 15);
         
+        // Magnitude with color
+        ctx.fillStyle = vecColor;
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`|Δ| = ${magnitude.toFixed(3)}`, panelWidth - padding - 15, panelHeight - padding - 25);
+        ctx.textAlign = 'left';
+        
+        // Direction indicator (which way divergence is happening)
+        const dominantAxis = Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > Math.abs(dz) ? 'x' :
+                            Math.abs(dy) > Math.abs(dz) ? 'y' : 'z';
         ctx.fillStyle = 'rgba(200, 200, 200, 0.6)';
-        ctx.fillText('Aperiodic switching between wings', energyGraphX, energyGraphY + energyGraphH + 25);
+        ctx.font = '10px monospace';
+        ctx.fillText(`Dominant: ${dominantAxis}-direction`, padding + 15, padding + 42);
+        
+      } else {
+        // No comparison
+        ctx.fillStyle = 'rgba(150, 150, 150, 0.5)';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Difference vector appears', panelWidth / 2, vecCenterY - 10);
+        ctx.fillText('when comparing trajectories', panelWidth / 2, vecCenterY + 15);
+        ctx.textAlign = 'left';
       }
       
       ctx.restore();
@@ -490,7 +686,7 @@ const LorenzDetailed = () => {
       }
       window.removeEventListener('resize', updateCanvasSize);
     };
-  }, [isPlaying, sigma, rho, beta, viewMode, trailLength, showSecondTrajectory]);
+  }, [isPlaying, sigma, rho, beta, viewMode, trailLength, showSecondTrajectory, perturbation, simSpeed]);
   
   return (
     <div className="w-full h-[calc(100vh-3.5rem)] bg-gray-950 flex flex-col">
@@ -597,26 +793,73 @@ const LorenzDetailed = () => {
                 </label>
                 <input
                   type="range"
-                  min="200"
-                  max="2000"
-                  step="100"
+                  min="500"
+                  max="5000"
+                  step="250"
                   value={trailLength}
                   onChange={(e) => setTrailLength(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
               </div>
               
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="showSecond"
-                  checked={showSecondTrajectory}
-                  onChange={(e) => setShowSecondTrajectory(e.target.checked)}
-                  className="rounded"
-                />
-                <label htmlFor="showSecond" className="text-xs">
-                  Show second trajectory (divergence)
+              <div>
+                <label className="text-xs flex justify-between mb-1">
+                  <span>Simulation Speed</span>
+                  <span className="text-green-400">{simSpeed}x</span>
                 </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={simSpeed}
+                  onChange={(e) => setSimSpeed(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                />
+              </div>
+              
+              {/* Perturbation Controls */}
+              <div className="border-t border-gray-700 pt-3">
+                <label className="text-xs font-semibold text-yellow-400 mb-2 block">
+                  🦋 Butterfly Effect Demo
+                </label>
+                
+                {!showSecondTrajectory ? (
+                  <button
+                    onClick={addSecondTrajectory}
+                    className="w-full flex items-center justify-center gap-2 text-sm bg-green-600 hover:bg-green-500 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    <Plus size={16} />
+                    Add Perturbed Trajectory
+                  </button>
+                ) : (
+                  <button
+                    onClick={removeSecondTrajectory}
+                    className="w-full flex items-center justify-center gap-2 text-sm bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    Remove Second Trajectory
+                  </button>
+                )}
+                
+                <div className="mt-3">
+                  <label className="text-xs flex justify-between mb-1">
+                    <span>Perturbation Δz₀</span>
+                    <span className="text-yellow-400">{perturbation.toExponential(0)}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="-12"
+                    max="-1"
+                    step="1"
+                    value={Math.log10(perturbation)}
+                    onChange={(e) => setPerturbation(Math.pow(10, parseInt(e.target.value)))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    Smaller = more dramatic chaos demo
+                  </div>
+                </div>
               </div>
             </div>
           </div>

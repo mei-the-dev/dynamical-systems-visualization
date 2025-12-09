@@ -27,3 +27,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Node modules
+interactive-viz/node_modules/
+node_modules/
