@@ -87,6 +87,23 @@ const Contact = () => {
           </p>
         </div>
 
+        {/* GitHub Education Thank You */}
+        <div className="mt-8 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-xl p-6 border border-gray-700/50">
+          <div className="flex items-center gap-3 mb-3">
+            <Github size={24} className="text-white" />
+            <h3 className="text-lg font-semibold text-white">Acknowledgments</h3>
+          </div>
+          <p className="text-gray-300 leading-relaxed">
+            Special thanks to the <a 
+              href="https://education.github.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 underline"
+            >GitHub Education Program</a> for providing students with access to powerful development tools 
+            and resources that made this project possible.
+          </p>
+        </div>
+
         {/* Footer */}
         <div className="mt-12 text-center text-gray-500 text-sm">
           <p className="flex items-center justify-center gap-2">
