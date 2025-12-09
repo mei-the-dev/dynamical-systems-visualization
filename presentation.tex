@@ -1,0 +1,643 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% Theme and styling
+\usetheme{Madrid}
+\usecolortheme{whale}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+% Packages
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+% Custom colors
+\definecolor{chaosblue}{RGB}{25,84,123}
+\definecolor{attractorred}{RGB}{180,40,40}
+\definecolor{limitgreen}{RGB}{34,139,34}
+
+% Set paths
+\graphicspath{{media/images/}}
+
+% Title information
+\title[Dynamical Systems]{Strange Attractors \& Dynamical Systems}
+\subtitle{From Van der Pol Oscillators to Deterministic Chaos}
+\author{Dynamical Systems Exploration}
+\date{\today}
+\institute{Mathematical Physics}
+
+\begin{document}
+
+%=============================================================================
+% TITLE SLIDE
+%=============================================================================
+\begin{frame}
+    \titlepage
+\end{frame}
+
+%=============================================================================
+% TABLE OF CONTENTS
+%=============================================================================
+\begin{frame}{Outline}
+    \tableofcontents
+\end{frame}
+
+%=============================================================================
+% SECTION 1: WHAT ARE STRANGE ATTRACTORS?
+%=============================================================================
+\section{What Are Strange Attractors?}
+
+\begin{frame}{The Nature of Dynamical Systems}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Key Question:}\\[0.5em]
+            What happens to systems over long time periods?
+            
+            \vspace{1em}
+            \textbf{Attractors} are the geometric structures toward which dynamical systems evolve.
+            
+            \vspace{1em}
+            \begin{itemize}
+                \item \textcolor{chaosblue}{Fixed points} (stable equilibria)
+                \item \textcolor{limitgreen}{Limit cycles} (periodic orbits)
+                \item \textcolor{attractorred}{Strange attractors} (chaotic behavior)
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{grand_comparison.png}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{From Order to Chaos}
+    \begin{block}{The Lyapunov Exponent}
+        Measures the rate of separation of infinitesimally close trajectories:
+        \[
+            |\delta\mathbf{x}(t)| \sim |\delta\mathbf{x}_0| e^{\lambda t}
+        \]
+    \end{block}
+    
+    \vspace{1em}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item $\lambda < 0$: Stable (trajectories converge)
+                \item $\lambda = 0$: Marginally stable
+                \item $\lambda > 0$: \textcolor{attractorred}{Chaotic} (trajectories diverge)
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{Deterministic Chaos}
+                Simple equations can produce unpredictable behavior!
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%=============================================================================
+% SECTION 2: VAN DER POL OSCILLATOR
+%=============================================================================
+\section{Van der Pol Oscillator}
+
+\begin{frame}{The Van der Pol Equation}
+    \begin{block}{Governing Equation (1927)}
+        \[
+            \frac{d^2x}{dt^2} - \mu(1-x^2)\frac{dx}{dt} + x = 0
+        \]
+    \end{block}
+    
+    \vspace{0.3em}
+    \textbf{First-order system form:}
+    \[
+        \begin{cases}
+            \dot{x} = y \\[0.3em]
+            \dot{y} = \mu(1-x^2)y - x
+        \end{cases}
+    \]
+    
+    \vspace{0.3em}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item $\mu > 0$: Nonlinear damping parameter
+                \item Discovered in vacuum tube circuits
+                \item First example of a \textbf{limit cycle}
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{alertblock}{Key Feature}
+                Amplitude-dependent damping creates self-sustained oscillations
+            \end{alertblock}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Energy Pumping Mechanism}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Effective damping coefficient:}
+            \[
+                \gamma_{\text{eff}}(x) = -\mu(1 - x^2)
+            \]
+            
+            \vspace{0.5em}
+            \begin{tabular}{|c|c|c|}
+                \hline
+                \textbf{Condition} & \textbf{Damping} & \textbf{Effect} \\
+                \hline
+                $|x| < 1$ & Negative & Energy IN \\
+                $|x| = 1$ & Zero & Balance \\
+                $|x| > 1$ & Positive & Energy OUT \\
+                \hline
+            \end{tabular}
+            
+            \vspace{0.5em}
+            \textbf{Result:} Self-regulating limit cycle
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \begin{tikzpicture}[scale=0.75]
+                \draw[->] (-3,0) -- (3,0) node[right] {$x$};
+                \draw[->] (0,-2.5) -- (0,2.5) node[above] {$y$};
+                % Energy zones
+                \fill[green!20] (-1,-2.3) rectangle (1,2.3);
+                \draw[dashed,gray] (-1,-2.3) -- (-1,2.3);
+                \draw[dashed,gray] (1,-2.3) -- (1,2.3);
+                % Limit cycle
+                \draw[very thick,limitgreen,domain=0:360,samples=100] 
+                    plot ({2*cos(\x)},{1.5*sin(\x)});
+                % Arrows showing dynamics
+                \draw[->,blue,thick] (0.3,0.1) -- (0.8,0.5);
+                \draw[->,blue,thick] (-0.3,-0.1) -- (-0.8,-0.5);
+                \draw[->,attractorred,thick] (2.3,0.8) -- (2.1,0.6);
+                \draw[->,attractorred,thick] (-2.3,-0.8) -- (-2.1,-0.6);
+                % Labels
+                \node at (0,2.8) {\small\textcolor{limitgreen}{Energy pumped in}};
+                \fill[red] (0,0) circle (2pt);
+                \node[below right] at (0.1,0) {\tiny Unstable};
+            \end{tikzpicture}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Phase Plane Analysis: Nullclines}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Nullclines} are curves where $\dot{x} = 0$ or $\dot{y} = 0$:
+            
+            \vspace{0.5em}
+            \textbf{$x$-nullcline} ($\dot{x} = 0$):
+            \[
+                y = 0 \quad \text{(the $x$-axis)}
+            \]
+            
+            \textbf{$y$-nullcline} ($\dot{y} = 0$):
+            \[
+                y = \frac{x}{\mu(1-x^2)}
+            \]
+            
+            \vspace{0.5em}
+            \textbf{Equilibria} occur at nullcline intersections.
+            
+            \vspace{0.3em}
+            Only one equilibrium: \textcolor{attractorred}{$(0, 0)$}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \begin{tikzpicture}[scale=0.7]
+                \draw[->] (-3,0) -- (3,0) node[right] {$x$};
+                \draw[->] (0,-2.5) -- (0,2.5) node[above] {$y$};
+                % x-nullcline (y=0)
+                \draw[very thick,chaosblue] (-2.8,0) -- (2.8,0);
+                \node[chaosblue] at (2.5,0.4) {\small $\dot{x}=0$};
+                % y-nullcline (cubic-like curve)
+                \draw[very thick,attractorred,domain=-0.85:0.85,samples=50] 
+                    plot (\x, {0.5*\x/(1-\x*\x)});
+                \draw[very thick,attractorred,domain=-2.5:-1.15,samples=30] 
+                    plot (\x, {0.5*\x/(1-\x*\x)});
+                \draw[very thick,attractorred,domain=1.15:2.5,samples=30] 
+                    plot (\x, {0.5*\x/(1-\x*\x)});
+                \node[attractorred] at (-2.2,1.8) {\small $\dot{y}=0$};
+                % Equilibrium
+                \fill[black] (0,0) circle (3pt);
+                \node at (0.5,-0.5) {\small $(0,0)$};
+                % Asymptotes
+                \draw[dashed,gray] (-1,-2.5) -- (-1,2.5);
+                \draw[dashed,gray] (1,-2.5) -- (1,2.5);
+            \end{tikzpicture}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Equilibrium Analysis: The Jacobian Matrix}
+    \begin{block}{General Jacobian}
+        For $\dot{x} = f(x,y)$, $\dot{y} = g(x,y)$:
+        \[
+            J(x,y) = \begin{pmatrix}
+                \frac{\partial f}{\partial x} & \frac{\partial f}{\partial y} \\[0.5em]
+                \frac{\partial g}{\partial x} & \frac{\partial g}{\partial y}
+            \end{pmatrix}
+            = \begin{pmatrix}
+                0 & 1 \\[0.3em]
+                -2\mu xy - 1 & \mu(1-x^2)
+            \end{pmatrix}
+        \]
+    \end{block}
+    
+    \vspace{0.5em}
+    \textbf{At the origin} $(x, y) = (0, 0)$:
+    \[
+        J(0,0) = \begin{pmatrix}
+            0 & 1 \\
+            -1 & \mu
+        \end{pmatrix}
+    \]
+    
+    \vspace{0.3em}
+    \begin{itemize}
+        \item Trace: $\text{tr}(J) = \mu > 0$ \quad (sum of eigenvalues)
+        \item Determinant: $\det(J) = 1 > 0$ \quad (product of eigenvalues)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Eigenvalue Analysis: Stability Classification}
+    \textbf{Characteristic equation:} $\lambda^2 - \mu\lambda + 1 = 0$
+    
+    \vspace{0.5em}
+    \begin{block}{Eigenvalues}
+        \[
+            \lambda_{1,2} = \frac{\mu \pm \sqrt{\mu^2 - 4}}{2}
+        \]
+    \end{block}
+    
+    \vspace{0.3em}
+    \textbf{Discriminant:} $\Delta = \mu^2 - 4$
+    
+    \vspace{0.5em}
+    \begin{center}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{$\mu$ range} & \textbf{Eigenvalues} & \textbf{Type} & \textbf{Stability} \\
+        \hline
+        $\mu = 0$ & $\pm i$ & Center & Neutral \\
+        \hline
+        $0 < \mu < 2$ & Complex, $\text{Re} > 0$ & \textcolor{attractorred}{Unstable spiral} & Unstable \\
+        \hline
+        $\mu = 2$ & $\lambda = 1$ (repeated) & Unstable node & Unstable \\
+        \hline
+        $\mu > 2$ & Real, both $> 0$ & \textcolor{attractorred}{Unstable node} & Unstable \\
+        \hline
+    \end{tabular}
+    \end{center}
+    
+    \vspace{0.3em}
+    \begin{alertblock}{Conclusion}
+        For \textbf{any} $\mu > 0$: origin is unstable — trajectories escape!
+    \end{alertblock}
+\end{frame}
+
+\begin{frame}{The Poincaré-Bendixson Theorem}
+    \textbf{Question:} If the origin is unstable, where do trajectories go?
+    
+    \vspace{0.5em}
+    \begin{block}{Poincaré-Bendixson Theorem}
+        If a trajectory in $\mathbb{R}^2$ enters a closed, bounded region $R$ containing \textbf{no equilibria} and never leaves, then it must approach a \textbf{periodic orbit}.
+    \end{block}
+    
+    \vspace{0.5em}
+    \textbf{Application to Van der Pol:}
+    \begin{enumerate}
+        \item Origin is unstable $\Rightarrow$ trajectories spiral \textit{outward}
+        \item Energy dissipation when $|x| > 1$ $\Rightarrow$ trajectories are \textit{bounded}
+        \item Trajectories enter an annular region with no equilibria
+        \item $\therefore$ A \textcolor{limitgreen}{\textbf{limit cycle}} must exist!
+    \end{enumerate}
+    
+    \vspace{0.3em}
+    \begin{exampleblock}{Key Insight}
+        The limit cycle is the \textit{unique} stable attractor for $\mu > 0$
+    \end{exampleblock}
+\end{frame}
+
+\begin{frame}{Relaxation Oscillations: Large $\mu$}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            When $\mu \gg 1$, the system exhibits \textbf{relaxation oscillations}:
+            
+            \vspace{0.5em}
+            \begin{enumerate}
+                \item \textbf{Slow phase:} Trajectory creeps along the cubic nullcline
+                \item \textbf{Fast phase:} Rapid jump between branches
+            \end{enumerate}
+            
+            \vspace{0.5em}
+            \textbf{Period scaling:}
+            \[
+                T \approx (3 - 2\ln 2)\mu \approx 1.614\mu
+            \]
+            
+            \vspace{0.3em}
+            \textbf{Biological examples:}
+            \begin{itemize}
+                \item Heartbeat (SA node)
+                \item Neural action potentials
+                \item Predator-prey cycles
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \begin{tikzpicture}[scale=0.65]
+                \draw[->] (-3,0) -- (3,0) node[right] {$x$};
+                \draw[->] (0,-2.5) -- (0,2.5) node[above] {$y$};
+                % Cubic nullcline
+                \draw[thick,gray,domain=-2.2:2.2,samples=100] 
+                    plot (\x, {0.3*(\x*\x*\x/3 - \x)});
+                % Relaxation cycle
+                \draw[very thick,limitgreen] (-2,1.8) -- (-2,-0.5);
+                \draw[very thick,limitgreen,->,>=stealth] (-2,-0.5) -- (1,-0.5);
+                \draw[very thick,limitgreen] (2,-1.8) -- (2,0.5);
+                \draw[very thick,limitgreen,->,>=stealth] (2,0.5) -- (-1,0.5);
+                \draw[very thick,limitgreen] (-2,1.8) -- (-1,0.5);
+                \draw[very thick,limitgreen] (2,-1.8) -- (1,-0.5);
+                % Labels
+                \node at (-2.5,0.7) {\tiny Slow};
+                \node at (0,-0.9) {\tiny Fast};
+                \node at (2.5,-0.7) {\tiny Slow};
+                \node at (0,0.9) {\tiny Fast};
+                \fill[red] (0,0) circle (2pt);
+            \end{tikzpicture}
+            
+            \vspace{0.3em}
+            \small Relaxation oscillation for $\mu \gg 1$
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Heartbeat Modeling with Van der Pol}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            The Van der Pol oscillator models \textbf{cardiac rhythms}:
+            
+            \vspace{0.5em}
+            \begin{itemize}
+                \item Sinoatrial node acts as a \textit{relaxation oscillator}
+                \item Self-sustaining periodic signal
+                \item Robust against perturbations
+            \end{itemize}
+            
+            \vspace{0.5em}
+            \begin{block}{FitzHugh-Nagumo Model}
+                \[
+                    \begin{cases}
+                        \dot{v} = v - \frac{v^3}{3} - w + I_{\text{ext}} \\[0.3em]
+                        \dot{w} = \epsilon(v + a - bw)
+                    \end{cases}
+                \]
+            \end{block}
+            
+            \vspace{0.3em}
+            \small A simplified Hodgkin-Huxley model
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Clinical connections:}
+            
+            \vspace{0.5em}
+            \begin{tabular}{|l|l|}
+                \hline
+                \textbf{Normal} & Stable limit cycle \\
+                & (60-100 bpm) \\
+                \hline
+                \textbf{Arrhythmia} & Bifurcation from \\
+                & healthy cycle \\
+                \hline
+                \textbf{Pacemaker} & Artificial periodic \\
+                & forcing \\
+                \hline
+            \end{tabular}
+            
+            \vspace{0.5em}
+            \centering
+            \begin{tikzpicture}[scale=0.55]
+                \draw[->] (0,0) -- (6,0) node[right] {\tiny $t$};
+                \draw[->] (0,-1.2) -- (0,1.5) node[above] {\tiny $V$};
+                % Heartbeat waveform
+                \draw[thick,attractorred,domain=0:5.5,samples=200] 
+                    plot (\x, {1.0*exp(-2.5*mod(\x,1.8))*sin(12*mod(\x,1.8) r)});
+            \end{tikzpicture}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Summary: Van der Pol Dynamics}
+    \begin{center}
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        box/.style={rectangle, draw, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center, font=\small}
+    ]
+        \node[box, fill=red!20] (origin) {Unstable Origin\\$\lambda_{1,2}$: Re $> 0$};
+        \node[box, fill=green!20, right=2cm of origin] (limit) {Stable Limit Cycle\\Unique attractor};
+        \node[box, fill=blue!20, below=1cm of origin] (small) {Small $\mu$\\Unstable spiral};
+        \node[box, fill=orange!20, below=1cm of limit] (large) {Large $\mu$\\Relaxation oscillation};
+        
+        \draw[->,thick] (origin) -- (limit) node[midway,above] {\tiny Trajectories};
+        \draw[->,thick] (small) -- (origin);
+        \draw[->,thick] (large) -- (limit);
+    \end{tikzpicture}
+    \end{center}
+    
+    \vspace{0.5em}
+    \begin{block}{Key Results}
+        \begin{itemize}
+            \item \textbf{Unique equilibrium} at origin — always unstable for $\mu > 0$
+            \item \textbf{Limit cycle} guaranteed by Poincaré-Bendixson theorem
+            \item \textbf{Applications:} Electronics, cardiology, neuroscience
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+%=============================================================================
+% SECTION 3: LORENZ SYSTEM
+%=============================================================================
+\section{The Lorenz System}
+
+\begin{frame}{Lorenz Equations}
+    \begin{block}{The System (1963)}
+        \[
+            \begin{cases}
+                \dot{x} = \sigma(y - x) \\[0.5em]
+                \dot{y} = x(\rho - z) - y \\[0.5em]
+                \dot{z} = xy - \beta z
+            \end{cases}
+        \]
+    \end{block}
+    
+    \vspace{0.5em}
+    \textbf{Standard parameters:}
+    \begin{itemize}
+        \item $\sigma = 10$ (Prandtl number)
+        \item $\rho = 28$ (Rayleigh number)
+        \item $\beta = \frac{8}{3}$ (geometric factor)
+    \end{itemize}
+    
+    \vspace{0.5em}
+    Originally derived from atmospheric convection—now the icon of chaos theory.
+\end{frame}
+
+\begin{frame}{The Butterfly Attractor}
+    \centering
+    \includegraphics[width=0.85\textwidth]{lorenz_attractor_views.png}
+    
+    \vspace{0.5em}
+    \small Four views of the Lorenz attractor revealing its intricate 3D structure
+\end{frame}
+
+\begin{frame}{Sensitive Dependence on Initial Conditions}
+    \centering
+    \includegraphics[width=0.9\textwidth]{butterfly_effect.png}
+    
+    \vspace{0.5em}
+    \begin{quote}
+        ``Does the flap of a butterfly's wings in Brazil set off a tornado in Texas?''
+        \hfill — Edward Lorenz, 1972
+    \end{quote}
+\end{frame}
+
+\begin{frame}{Fractal Structure of Strange Attractors}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Properties:}
+            \begin{itemize}
+                \item Non-integer (fractal) dimension
+                \item Lorenz attractor: $D \approx 2.06$
+                \item Self-similar at all scales
+                \item Infinite length, zero volume
+            \end{itemize}
+            
+            \vspace{1em}
+            \textbf{Lyapunov spectrum:}
+            \begin{itemize}
+                \item $\lambda_1 \approx +0.9$ (expansion)
+                \item $\lambda_2 \approx 0$ (neutral)
+                \item $\lambda_3 \approx -14.6$ (contraction)
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{poincare_section.png}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+%=============================================================================
+% SECTION 4: FEIGENBAUM CASCADE
+%=============================================================================
+\section{Feigenbaum Cascade}
+
+\begin{frame}{Period-Doubling Route to Chaos}
+    \begin{block}{The Logistic Map}
+        \[
+            x_{n+1} = r \cdot x_n (1 - x_n)
+        \]
+    \end{block}
+    
+    \vspace{0.5em}
+    As $r$ increases:
+    \begin{enumerate}
+        \item $r < 3$: Single fixed point
+        \item $r = 3$: Period-2 cycle appears
+        \item $r \approx 3.45$: Period-4 cycle
+        \item $r \approx 3.54$: Period-8 cycle
+        \item $\vdots$
+        \item $r \approx 3.57$: \textcolor{attractorred}{Onset of chaos}
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{The Bifurcation Diagram}
+    \centering
+    \includegraphics[width=0.95\textwidth]{bifurcation_diagram.png}
+    
+    \vspace{0.5em}
+    \small Period-doubling cascade in the logistic map
+\end{frame}
+
+\begin{frame}{Feigenbaum's Universal Constant}
+    \begin{block}{The Feigenbaum Delta}
+        \[
+            \delta = \lim_{n \to \infty} \frac{r_n - r_{n-1}}{r_{n+1} - r_n} = 4.669201609\ldots
+        \]
+    \end{block}
+    
+    \vspace{1em}
+    \textbf{Remarkable universality:}
+    \begin{itemize}
+        \item Same constant appears in \textit{any} unimodal map
+        \item Independent of the specific equation
+        \item A deep mathematical invariant of chaos
+    \end{itemize}
+    
+    \vspace{1em}
+    \begin{exampleblock}{Physical Significance}
+        The ratio of successive bifurcation intervals approaches $\delta$ regardless of the system—from fluid dynamics to population models.
+    \end{exampleblock}
+\end{frame}
+
+%=============================================================================
+% CONCLUSION
+%=============================================================================
+\section{Conclusion}
+
+\begin{frame}{Summary: From Limit Cycles to Strange Attractors}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \textbf{Limit Cycles}
+            \begin{itemize}
+                \item Periodic, predictable
+                \item Van der Pol oscillator
+                \item Heartbeat modeling
+                \item $\lambda_{\max} = 0$
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \textbf{Strange Attractors}
+            \begin{itemize}
+                \item Aperiodic, chaotic
+                \item Lorenz system
+                \item Fractal geometry
+                \item $\lambda_{\max} > 0$
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    
+    \vspace{1em}
+    \begin{alertblock}{Key Takeaway}
+        Deterministic systems can exhibit unpredictable behavior. Chaos is not randomness—it is \textit{sensitive determinism}.
+    \end{alertblock}
+\end{frame}
+
+\begin{frame}{Further Reading}
+    \begin{thebibliography}{9}
+        \bibitem{strogatz} S.H. Strogatz, \textit{Nonlinear Dynamics and Chaos}, Westview Press, 2015.
+        \bibitem{lorenz} E.N. Lorenz, ``Deterministic Nonperiodic Flow,'' \textit{J. Atmos. Sci.} \textbf{20}, 130--141 (1963).
+        \bibitem{feigenbaum} M.J. Feigenbaum, ``Quantitative Universality for a Class of Nonlinear Transformations,'' \textit{J. Stat. Phys.} \textbf{19}, 25--52 (1978).
+        \bibitem{vanderpol} B. van der Pol, ``On Relaxation-Oscillations,'' \textit{Phil. Mag.} \textbf{2}, 978--992 (1926).
+    \end{thebibliography}
+\end{frame}
+
+\begin{frame}
+    \centering
+    \Huge\textcolor{chaosblue}{Thank You}
+    
+    \vspace{1em}
+    \large Questions?
+    
+    \vspace{2em}
+    \normalsize
+    \textit{``Chaos is found in greatest abundance wherever order is being sought.\\
+    It always defeats order, because it is better organized.''}\\[0.5em]
+    — Terry Pratchett
+\end{frame}
+
+\end{document}

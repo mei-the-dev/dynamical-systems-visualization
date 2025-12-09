@@ -1,0 +1,5 @@
+\beamer@sectionintoc {1}{What Are Strange Attractors?}{3}{0}{1}
+\beamer@sectionintoc {2}{Van der Pol Oscillator}{5}{0}{2}
+\beamer@sectionintoc {3}{The Lorenz System}{14}{0}{3}
+\beamer@sectionintoc {4}{Feigenbaum Cascade}{18}{0}{4}
+\beamer@sectionintoc {5}{Conclusion}{21}{0}{5}
