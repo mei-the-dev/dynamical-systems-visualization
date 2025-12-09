@@ -12,6 +12,7 @@ const DuffingEvolution = () => {
   const [beta, setBeta] = useState(1);       // Nonlinear stiffness
   const [showSettings, setShowSettings] = useState(false);
   const [preset, setPreset] = useState('limit-cycle');
+  const [simSpeed, setSimSpeed] = useState(3); // Simulation speed multiplier
   
   const trajectoriesRef = useRef([
     { x: 0.5, v: 0, points: [], poincarePoints: [], color: 'rgb(255, 100, 100)' },
@@ -91,27 +92,29 @@ const DuffingEvolution = () => {
       const dt = 0.01;
       
       if (isPlaying) {
-        const prevPhase = (omega * timeRef.current) % (2 * Math.PI);
-        timeRef.current += dt;
-        const newPhase = (omega * timeRef.current) % (2 * Math.PI);
-        
-        // Detect Poincaré section crossing (phase = 0)
-        const crossedPoincare = prevPhase > newPhase;
-        
-        trajectoriesRef.current = trajectoriesRef.current.map(traj => {
-          const newState = rk4Step(traj.x, traj.v, timeRef.current, dt, gamma, alpha, beta, F, omega);
+        for (let step = 0; step < simSpeed; step++) {
+          const prevPhase = (omega * timeRef.current) % (2 * Math.PI);
+          timeRef.current += dt;
+          const newPhase = (omega * timeRef.current) % (2 * Math.PI);
           
-          const newPoints = [...traj.points, { x: newState.x, v: newState.v, t: timeRef.current }];
-          if (newPoints.length > maxPoints) newPoints.shift();
+          // Detect Poincaré section crossing (phase = 0)
+          const crossedPoincare = prevPhase > newPhase;
           
-          let newPoincarePoints = [...traj.poincarePoints];
-          if (crossedPoincare && timeRef.current > 10) { // Skip transient
-            newPoincarePoints.push({ x: newState.x, v: newState.v });
-            if (newPoincarePoints.length > maxPoincarePoints) newPoincarePoints.shift();
-          }
-          
-          return { ...traj, x: newState.x, v: newState.v, points: newPoints, poincarePoints: newPoincarePoints };
-        });
+          trajectoriesRef.current = trajectoriesRef.current.map(traj => {
+            const newState = rk4Step(traj.x, traj.v, timeRef.current, dt, gamma, alpha, beta, F, omega);
+            
+            const newPoints = [...traj.points, { x: newState.x, v: newState.v, t: timeRef.current }];
+            if (newPoints.length > maxPoints) newPoints.shift();
+            
+            let newPoincarePoints = [...traj.poincarePoints];
+            if (crossedPoincare && timeRef.current > 10) { // Skip transient
+              newPoincarePoints.push({ x: newState.x, v: newState.v });
+              if (newPoincarePoints.length > maxPoincarePoints) newPoincarePoints.shift();
+            }
+            
+            return { ...traj, x: newState.x, v: newState.v, points: newPoints, poincarePoints: newPoincarePoints };
+          });
+        }
       }
       
       // Background
@@ -396,7 +399,7 @@ const DuffingEvolution = () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', updateCanvasSize);
     };
-  }, [isPlaying, gamma, F, omega, alpha, beta]);
+  }, [isPlaying, gamma, F, omega, alpha, beta, simSpeed]);
   
   return (
     <div className="w-full h-[calc(100vh-3.5rem)] bg-gray-950 flex flex-col">
@@ -452,6 +455,15 @@ const DuffingEvolution = () => {
         {showSettings && (
           <div className="absolute top-64 left-4 bg-gray-900/95 backdrop-blur p-4 rounded-xl border border-gray-700 text-white w-72">
             <div className="space-y-3">
+              <div>
+                <label className="text-xs flex justify-between mb-1">
+                  <span>Simulation Speed</span>
+                  <span className="text-green-400">{simSpeed}x</span>
+                </label>
+                <input type="range" min="1" max="10" step="1" value={simSpeed}
+                  onChange={(e) => setSimSpeed(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500" />
+              </div>
               <div>
                 <label className="text-xs flex justify-between mb-1">
                   <span>γ (damping)</span>
